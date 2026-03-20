@@ -2,50 +2,43 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub_cred' // Replace with your Jenkins DockerHub credentials ID
+        DOCKERHUB_CREDENTIALS = 'dockerhub_cred'
         IMAGE_NAME = 'pavansaikalyan/hotel1'
     }
 
     stages {
         stage('Checkout') {
             steps {
-               git branch: 'main', url: 'https://github.com/kalyan3201/hotel.git'
+                git branch: 'main', url: 'https://github.com/kalyan3201/hotel.git'
             }
         }
 
         stage('Build WAR') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${IMAGE_NAME}:latest
-                        docker logout
-                    '''
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                    sh 'docker push $IMAGE_NAME'
                 }
             }
         }
 
         stage('Run Container') {
             steps {
-                sh '''
-                    docker stop restaurant || true
-                    docker rm restaurant || true
-                    docker run -d -p 4444:8080 --name restaurant ${IMAGE_NAME}:latest
-                '''
+                sh 'docker rm -f hotel || true'
+                sh 'docker run -d -p 8080:8080 --name hotel $IMAGE_NAME'
             }
         }
     }
 }
-
