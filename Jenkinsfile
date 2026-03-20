@@ -37,7 +37,7 @@ pipeline {
         stage('Run Container') {
             steps {
                 sh 'docker rm -f hotel || true'
-                sh 'docker run -d -p 8081:8080 --name hotel $IMAGE_NAME'
+                sh 'docker run -d -p 8888:8080 --name hotel $IMAGE_NAME'
             }
         }
     }
