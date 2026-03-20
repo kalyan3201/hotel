@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub_cred'
+        DOCKERHUB_CREDENTIALS = 'dockerhub'
         IMAGE_NAME = 'pavansaikalyan/hotel1'
     }
 
@@ -27,7 +27,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh 'echo $PASS | docker login -u $USER --password-stdin'
                     sh 'docker push $IMAGE_NAME'
                 }
@@ -37,7 +37,7 @@ pipeline {
         stage('Run Container') {
             steps {
                 sh 'docker rm -f hotel || true'
-                sh 'docker run -d -p 8080:8080 --name hotel $IMAGE_NAME'
+                sh 'docker run -d -p 8081:8080 --name hotel $IMAGE_NAME'
             }
         }
     }
