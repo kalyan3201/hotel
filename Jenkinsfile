@@ -3,13 +3,13 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub_cred' // Replace with your Jenkins DockerHub credentials ID
-        IMAGE_NAME = 'sai798187/hotel:1999'
+        IMAGE_NAME = 'kalyan3201/hotel:1999'
     }
 
     stages {
         stage('Checkout') {
             steps {
-               git branch: 'main', url: 'https://github.com/sai798187/hotel.git'
+               git branch: 'main', url: 'https://github.com/kalyan3201/hotel.git'
             }
         }
 
