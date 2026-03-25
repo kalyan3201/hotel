@@ -2,43 +2,77 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub'
-        IMAGE_NAME = 'pavansaikalyan/hotel1'
+        DOCKERHUB_CREDENTIALS = "docker_cred"
+        IMAGE_NAME = "hotstarimg"
+        IMAGE_TAG = "latest"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/kalyan3201/hotel.git'
+                git branch: 'main', url: 'https://github.com/sai798187/hotstar.git'
+            }
+        }
+        stage('creating-artifact') {
+            steps {
+                sh 'mvn clean package'
             }
         }
 
-        stage('Build WAR') {
+        stage('Build Image') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Build Docker Image') {
+      stage('Push Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh 'docker push $IMAGE_NAME'
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker tag hotstarimg:latest $DOCKER_USER/hotstarimg:latest
+                        docker push $DOCKER_USER/hotstarimg:latest
+                        docker logout
+                    '''
                 }
             }
         }
-
-        stage('Run Container') {
-            steps {
-                sh 'docker rm -f hotel || true'
-                sh 'docker run -d -p 8888:8080 --name hotel $IMAGE_NAME'
+        stage('K8s Deployment') {
+         steps {
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                sh '''
+                export KUBECONFIG=$KUBECONFIG
+                kubectl get nodes
+                kubectl apply -f hotstar.yml
+                '''
+                }
             }
+        }
+     }
+
+    post {
+
+        always {
+            echo "Pipeline execution completed"
+        }
+
+        success {
+            echo "Build SUCCESS "
+            mail to: 'pavankurmadasu@gmail.com',
+                 subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
+                 body: "Build succeeded: ${env.BUILD_URL}"
+        }
+
+        failure {
+            echo "Build FAILED "
+            mail to: 'pavankurmadasu@gmail.com',
+                 subject: "Jenkins FAILURE: ${env.JOB_NAME}",
+                 body: "Build failed: ${env.BUILD_URL}"
+        }
+
+        unstable {
+            echo "Build UNSTABLE "
         }
     }
 }
