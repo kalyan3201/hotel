@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pavandeploy
+  labels:
+    app: psk
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: psk
+  template:
+    metadata:
+      labels:
+        app: psk
+    spec:
+      containers:
+        - name: pavancont
+          image: pavansaikalyan/hotel1:latest
+          ports:
+            - containerPort: 8080
