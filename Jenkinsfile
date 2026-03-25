@@ -59,14 +59,14 @@ pipeline {
 
         success {
             echo "Build SUCCESS "
-            mail to: 'pavankurmadasu@gmail.com',
+            mail to: 'pavansaikalyan/hotelimg:latest',
                  subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
                  body: "Build succeeded: ${env.BUILD_URL}"
         }
 
         failure {
             echo "Build FAILED "
-            mail to: 'pavankurmadasu@gmail.com',
+            mail to: 'pavansaikalyan/hotelimg:latest',
                  subject: "Jenkins FAILURE: ${env.JOB_NAME}",
                  body: "Build failed: ${env.BUILD_URL}"
         }
