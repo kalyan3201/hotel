@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = "dockerhub"
-        IMAGE_NAME = "hotel"
+        IMAGE_NAME = "hotel1"
         IMAGE_TAG = "latest"
     }
 
