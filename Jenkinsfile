@@ -31,7 +31,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag hotstarimg:latest $DOCKER_USER/hotstarimg:latest
+                        docker tag hotelimg:latest $DOCKER_USER/hotelimg:latest
                         docker push $DOCKER_USER/hotstarimg:latest
                         docker logout
                     '''
