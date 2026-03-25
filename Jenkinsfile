@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "docker_cred"
+        DOCKERHUB_CREDENTIALS = "dockerhub"
         IMAGE_NAME = "hotstarimg"
         IMAGE_TAG = "latest"
     }
@@ -44,7 +44,7 @@ pipeline {
                 sh '''
                 export KUBECONFIG=$KUBECONFIG
                 kubectl get nodes
-                kubectl apply -f hotstar.yml
+                kubectl apply -f hotel.yml
                 '''
                 }
             }
