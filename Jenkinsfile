@@ -22,13 +22,20 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube-server') {
-                    sh 'mvn sonar:sonar'
-                }
+       stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('sonarqube-server') {
+            withCredentials([string(credentialsId: 'sonarqubetoken', variable: 'SONAR_TOKEN')]) {
+                sh '''
+                mvn sonar:sonar \
+                -Dsonar.projectKey=hotel-app \
+                -Dsonar.host.url=http://54.172.140.97:9000 \
+                -Dsonar.login=$SONAR_TOKEN
+                '''
             }
         }
+    }
+}
 
         stage('Upload to Nexus') {
             steps {
