@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "pavansaikalyan/hotel:latest"
         NEXUS_URL = "http://54.172.140.97:8081"
-        SONARQUBE = "sq"
+        SONARQUBE = "sonarqube-server"
     }
 
     stages {
