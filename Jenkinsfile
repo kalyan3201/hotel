@@ -2,77 +2,75 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "dockerhub"
-        IMAGE_NAME = "hotel1"
-        IMAGE_TAG = "latest"
+        DOCKER_IMAGE = "pavansaikalyan/hotel:latest"
+        NEXUS_URL = "http://54.172.140.97:8081"
+        SONARQUBE = "sq"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/kalyan3201/hotel.git'
+                git branch: 'main',
+                url: 'https://github.com/kalyan3201/hotel.git'
             }
         }
-        stage('creating-artifact') {
+
+        stage('Build') {
             steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('Build Image') {
+        stage('SonarQube Analysis') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                withSonarQubeEnv('sonarqube-server') {
+                    sh 'mvn sonar:sonar'
+                }
             }
         }
 
-      stage('Push Docker Image') {
+        stage('Upload to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                sh '''
+                curl -u admin:admin \
+                --upload-file target/*.jar \
+                http://54.172.140.97:8081/repository/maven-releases/
+                '''
+            }
+        }
+
+        stage('Remove Old Docker Image') {
+            steps {
+                sh '''
+                docker rmi -f $DOCKER_IMAGE || true
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE .'
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                     sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag hotelimg:latest $DOCKER_USER/hotelimg:latest
-                        docker push $DOCKER_USER/hotstarimg:latest
-                        docker logout
+                    docker login -u $USER -p $PASS
+                    docker push $DOCKER_IMAGE
                     '''
                 }
             }
         }
-        stage('K8s Deployment') {
-         steps {
-            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+
+        stage('Deploy to Kubernetes') {
+            steps {
                 sh '''
-                export KUBECONFIG=$KUBECONFIG
-                kubectl get nodes
-                kubectl apply -f hotel.yml
+                kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE --record
                 '''
-                }
             }
-        }
-     }
-
-    post {
-
-        always {
-            echo "Pipeline execution completed"
-        }
-
-        success {
-            echo "Build SUCCESS "
-            mail to: 'pavansaikalyan/hotelimg:latest',
-                 subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
-                 body: "Build succeeded: ${env.BUILD_URL}"
-        }
-
-        failure {
-            echo "Build FAILED "
-            mail to: 'pavansaikalyan/hotelimg:latest',
-                 subject: "Jenkins FAILURE: ${env.JOB_NAME}",
-                 body: "Build failed: ${env.BUILD_URL}"
-        }
-
-        unstable {
-            echo "Build UNSTABLE "
         }
     }
 }
