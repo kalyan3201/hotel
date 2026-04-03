@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hotel-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hotel
+  template:
+    metadata:
+      labels:
+        app: hotel
+    spec:
+      containers:
+      - name: hotel-container
+        image: pavansaikalyan/hotel:latest
+        ports:
+        - containerPort: 8080
