@@ -1,22 +1,48 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     environment {
-        DOCKER_IMAGE = "pavansaikalyan/hotel:latest"
+        DOCKER_IMAGE = "pavansaikalyan/hotel:${BUILD_NUMBER}"
         NEXUS_URL = "http://54.172.140.97:8081"
         SONARQUBE = "sonarqube-server"
     }
 
     stages {
-stage('Clean Workspace') {
-    steps {
-        deleteDir()
-    }
-}
+
+        stage('Clean Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
+
         stage('Checkout Code') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/kalyan3201/hotel.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/kalyan3201/hotel.git'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Verify Files') {
+            steps {
+                sh '''
+                echo "Current directory:"
+                pwd
+
+                echo "Listing all files:"
+                ls -R
+
+                echo "Checking k8s folder:"
+                ls k8s
+                '''
             }
         }
 
@@ -26,36 +52,34 @@ stage('Clean Workspace') {
             }
         }
 
-       stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('sonarqube-server') {
-            withCredentials([string(credentialsId: 'sonarqubetocken', variable: 'SONAR_TOKEN')]) {
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube-server') {
+                    withCredentials([string(credentialsId: 'sonarqubetocken', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=hotel-app \
+                        -Dsonar.host.url=http://54.172.140.97:9000 \
+                        -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Upload to Nexus') {
+            steps {
                 sh '''
-                mvn sonar:sonar \
-                -Dsonar.projectKey=hotel-app \
-                -Dsonar.host.url=http://54.172.140.97:9000 \
-                -Dsonar.login=$SONAR_TOKEN
+                curl -u admin:admin \
+                --upload-file target/restaurant-site.war \
+                http://54.172.140.97:8081/repository/maven-releases/
                 '''
             }
         }
-    }
-}
-
-       stage('Upload to Nexus') {
-    steps {
-        sh '''
-        curl -u admin:admin \
-        --upload-file target/restaurant-site.war \
-        http://54.172.140.97:8081/repository/maven-releases/
-        '''
-    }
-}
 
         stage('Remove Old Docker Image') {
             steps {
-                sh '''
-                docker rmi -f $DOCKER_IMAGE || true
-                '''
+                sh 'docker rmi -f $DOCKER_IMAGE || true'
             }
         }
 
@@ -76,27 +100,30 @@ stage('Clean Workspace') {
             }
         }
 
-    stage('Deploy to Kubernetes') {
-    steps {
-        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-            sh '''
-            export KUBECONFIG=$KUBECONFIG
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG
 
-            echo "Checking cluster connection..."
-            kubectl get nodes
+                    echo "Checking cluster connection..."
+                    kubectl get nodes
 
-            echo "Applying Kubernetes manifests..."
-            kubectl apply -f k8s/deployment.yaml
-            kubectl apply -f k8s/service.yaml
+                    echo "Verifying k8s files..."
+                    ls k8s
 
-            echo "Updating image in deployment..."
-            kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE
+                    echo "Applying Kubernetes manifests..."
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
 
-            echo "Verifying rollout..."
-            kubectl rollout status deployment/hotel-deploy
-            '''
+                    echo "Updating image in deployment..."
+                    kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE
+
+                    echo "Verifying rollout..."
+                    kubectl rollout status deployment/hotel-deploy
+                    '''
+                }
+            }
         }
-    }
-}
     }
 }
