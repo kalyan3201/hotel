@@ -72,13 +72,24 @@ pipeline {
             }
         }
 
-     stage('Deploy to Kubernetes') {
+    stage('Deploy to Kubernetes') {
     steps {
         withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
             sh '''
             export KUBECONFIG=$KUBECONFIG
+
+            echo "Checking cluster connection..."
             kubectl get nodes
-            kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE --record
+
+            echo "Applying Kubernetes manifests..."
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/service.yaml
+
+            echo "Updating image in deployment..."
+            kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE
+
+            echo "Verifying rollout..."
+            kubectl rollout status deployment/hotel-deploy
             '''
         }
     }
