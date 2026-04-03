@@ -25,7 +25,7 @@ pipeline {
        stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv('sonarqube-server') {
-            withCredentials([string(credentialsId: 'sonarqubetoken', variable: 'SONAR_TOKEN')]) {
+            withCredentials([string(credentialsId: 'sonarqubetocken', variable: 'SONAR_TOKEN')]) {
                 sh '''
                 mvn sonar:sonar \
                 -Dsonar.projectKey=hotel-app \
