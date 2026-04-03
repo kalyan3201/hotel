@@ -37,15 +37,15 @@ pipeline {
     }
 }
 
-        stage('Upload to Nexus') {
-            steps {
-                sh '''
-                curl -u admin:admin \
-                --upload-file target/*.jar \
-                http://54.172.140.97:8081/repository/maven-releases/
-                '''
-            }
-        }
+       stage('Upload to Nexus') {
+    steps {
+        sh '''
+        curl -u admin:admin \
+        --upload-file target/restaurant-site.war \
+        http://54.172.140.97:8081/repository/maven-releases/
+        '''
+    }
+}
 
         stage('Remove Old Docker Image') {
             steps {
