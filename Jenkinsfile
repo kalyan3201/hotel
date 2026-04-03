@@ -65,12 +65,16 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE --record
-                '''
-            }
+     stage('Deploy to Kubernetes') {
+    steps {
+        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+            sh '''
+            export KUBECONFIG=$KUBECONFIG
+            kubectl get nodes
+            kubectl set image deployment/hotel-deploy hotel-container=$DOCKER_IMAGE --record
+            '''
         }
+    }
+}
     }
 }
